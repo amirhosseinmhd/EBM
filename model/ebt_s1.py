@@ -223,18 +223,18 @@ class EBTS1Model(nn.Module):
         with torch.set_grad_enabled(learning):
             for step in range(mcmc_num_steps):
                 # Enable gradients for predictions
-                predicted_logits = predicted_logits.detach().requires_grad_(True)
-                
+                predicted_logits = predicted_logits.requires_grad_(True)
+
                 # Normalize to probability distribution (stabilizes training)
                 predicted_probs = self.softmax(predicted_logits)  # (batch, seq_len-1, vocab)
-                
+
                 # Convert to embeddings: prob_dist @ embedding_matrix
                 # This is key: we predict in embedding space by weighted sum
                 predicted_embeds = torch.matmul(
                     predicted_probs,
                     self.embeddings.weight
                 )  # (batch, seq_len-1, dim)
-                
+
                 # ====================================================================
                 # Step 4: Concatenate observed and predicted embeddings
                 # ====================================================================
@@ -251,12 +251,12 @@ class EBTS1Model(nn.Module):
                 
                 # Compute energy (scalar per prediction)
                 energy = self.output_proj(predicted_output).squeeze(-1)  # (batch, seq_len-1)
-                
-                # Store outputs
-                predicted_distributions.append(predicted_logits.detach())
-                predicted_energies.append(energy.detach())
-                predicted_embeddings_list.append(predicted_embeds.detach())
-                
+
+                # Store outputs (keep gradients for loss computation)
+                predicted_distributions.append(predicted_logits)
+                predicted_energies.append(energy)
+                predicted_embeddings_list.append(predicted_embeds)
+
                 # ====================================================================
                 # Step 6: Compute gradient and update predictions
                 # ====================================================================
@@ -266,14 +266,13 @@ class EBTS1Model(nn.Module):
                     pred_grad = torch.autograd.grad(
                         outputs=energy_sum,
                         inputs=predicted_logits,
-                        create_graph=learning,  # Need this for backprop through optimization
+                        retain_graph=False,  # Don't need to backprop through this
+                        create_graph=False,  # S1: detachment means no second-order gradients
                     )[0]
-                    
-                    # Gradient descent: predictions -= α * ∇_pred energy
-                    predicted_logits = predicted_logits - self.alpha * pred_grad
-                    
-                    # **DETACH** between steps (S1 specific for stability)
-                    predicted_logits = predicted_logits.detach()
+
+                    # Gradient descent with detachment (S1 specific for stability)
+                    # Detach here breaks gradient flow through iterations but not through energy computation
+                    predicted_logits = (predicted_logits - self.alpha * pred_grad).detach()
         
         return predicted_distributions, predicted_energies, predicted_embeddings_list
     
