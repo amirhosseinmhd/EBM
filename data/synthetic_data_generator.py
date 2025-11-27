@@ -78,8 +78,8 @@ def _create_multiplication_data(size_train, size_val, size_test, vec_size, devic
     y_val = v1_val * v2_val
     
     # Test set: harder problem - larger values, range [-2, 2]
-    v1_test = torch.randn(size_test, vec_size, device=device) * 10 + 12
-    v2_test = torch.randn(size_test, vec_size, device=device) * 10 + 12
+    v1_test = torch.randn(size_test, vec_size, device=device) * 4 - 2
+    v2_test = torch.randn(size_test, vec_size, device=device) * 4 - 2
     x_test = torch.cat([v1_test, v2_test], dim=1)
     y_test = v1_test * v2_test
     
