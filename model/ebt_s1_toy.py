@@ -193,12 +193,7 @@ def train_energy_model(train_dataset, val_dataset, test_dataset, input_dim, outp
     with torch.no_grad():
         test_loss_final = (y_pred_test.detach() - y_test).pow(2).mean()
     print(f"Final Test MSE: {test_loss_final.item():.6f}")
-    
-    # Show some examples from test set
-    print("\n--- Sample Predictions from Test Set ---")
-    for i in range(5):
-        print(f"Pred: {y_pred_test[i].detach().cpu().numpy()}, True: {y_test[i].cpu().numpy()}")
-    
+
     return energy_fn
 
 

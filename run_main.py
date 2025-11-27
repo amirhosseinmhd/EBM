@@ -11,43 +11,7 @@ from data.synthetic_data_generator import create_synthetic_data
 from model.ebt_s1_toy import train_energy_model, test_energy_model
 from model.ffn_toy import train_feedforward
 from model.pc_add import train_predictive_coding
-
-
-def get_default_config(model_type):
-    """
-    Get default hyperparameter configuration for each model type.
-    
-    Args:
-        model_type: 'ebt', 'ffn', or 'pc'
-    
-    Returns:
-        Dictionary of default hyperparameters
-    """
-    configs = {
-        'ebt': {
-            'n_optimization_steps': 10,
-            'step_size': 1,
-            'latent_dim': 128,
-            'batch_size': 64,
-            'num_epochs': 10000,
-            'lr': 1e-3
-        },
-        'ffn': {
-            'latent_dim': 128,
-            'batch_size': 128,
-            'num_epochs': 50000,
-            'lr': 1e-4
-        },
-        'pc': {
-            'latent_dim': 128,
-            'batch_size': 64,
-            'num_epochs': 10000,
-            'lr': 1e-3,
-            'n_inference_steps': 20,
-            'inference_lr': 0.1
-        }
-    }
-    return configs.get(model_type, {})
+from config.model_configs import get_default_config
 
 
 def run_main(model_type, task='add', vec_size=10, size_train=10000, 
@@ -185,7 +149,11 @@ def compare_models(models_to_run, task='add', vec_size=10, size_train=10000,
     
     # Run each model
     for model_type in models_to_run:
-        model_config = configs.get(model_type, None)
+        # Start with default config and update with custom config if provided
+        model_config = get_default_config(model_type)
+        if model_type in configs:
+            model_config.update(configs[model_type])
+        
         result = run_main(
             model_type=model_type,
             task=task,
@@ -234,11 +202,11 @@ def compare_models(models_to_run, task='add', vec_size=10, size_train=10000,
 
 if __name__ == "__main__":
     # Example 1: Run a single model with default settings
-    result = run_main(
-        model_type='ebt',
-        task='add',
-        vec_size=10
-    )
+    # result = run_main(
+    #     model_type='ebt',
+    #     task='add',
+    #     vec_size=50
+    # )
     
     # Example 2: Run a single model with custom config
     # result = run_main(
@@ -253,11 +221,11 @@ if __name__ == "__main__":
     # )
     
     # Example 3: Compare multiple models using the wrapper
-    # results = compare_models(
-    #     models_to_run=['ebt', 'pc', 'ffn'],
-    #     task='add',
-    #     vec_size=10
-    # )
+    results = compare_models(
+        models_to_run=['ebt', 'ffn'],
+        task='add',
+        vec_size=50
+    )
     
     # Example 4: Compare models with custom configs
     # results = compare_models(
