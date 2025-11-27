@@ -8,8 +8,8 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from data.synthetic_data_generator import create_synthetic_data
-from model.ebt_s1_add import train_energy_model, test_energy_model
-from model.ffn_add import train_feedforward
+from model.ebt_s1_toy import train_energy_model, test_energy_model
+from model.ffn_toy import train_feedforward
 from model.pc_add import train_predictive_coding
 
 
