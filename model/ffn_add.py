@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -46,7 +47,10 @@ def train_feedforward(train_dataset, val_dataset, test_dataset, input_dim, outpu
     if torch.cuda.is_available():
         print(f"GPU: {torch.cuda.get_device_name(0)}")
     
-    # Move datasets to device
+    # Create data loaders
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    
+    # Move validation and test datasets to device
     x_val, y_val = val_dataset.tensors
     x_test, y_test = test_dataset.tensors
     
@@ -59,37 +63,38 @@ def train_feedforward(train_dataset, val_dataset, test_dataset, input_dim, outpu
     print("=" * 60)
     
     # Training loop
-    for epoch in range(num_epochs):
+    epoch = 0
+    while epoch < num_epochs:
         model.train()
         
-        # Sample random batch from training dataset
-        indices = torch.randint(0, len(train_dataset), (batch_size,))
-        x = train_dataset.tensors[0][indices]
-        y_true = train_dataset.tensors[1][indices]
-        
-        # Forward pass
-        y_pred = model(x)
-        loss = criterion(y_pred, y_true)
-        
-        # Backward pass
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        
-        # Evaluate on validation and test sets
-        if epoch % 250 == 0:
-            model.eval()
-            with torch.no_grad():
-                # Validation loss
-                y_pred_val = model(x_val)
-                val_loss = criterion(y_pred_val, y_val)
-                
-                # Test loss
-                y_pred_test = model(x_test)
-                test_loss = criterion(y_pred_test, y_test)
+        for x, y_true in train_loader:
+            # Forward pass
+            y_pred = model(x)
+            loss = criterion(y_pred, y_true)
             
-            print(f"Epoch {epoch:4d} | Train Loss: {loss.item():.6f} | Val Loss: {val_loss.item():.6f} | Test Loss: {test_loss.item():.6f}")
-            model.train()
+            # Backward pass
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+            # Evaluate on validation and test sets
+            if epoch % 250 == 0:
+                model.eval()
+                with torch.no_grad():
+                    # Validation loss
+                    y_pred_val = model(x_val)
+                    val_loss = criterion(y_pred_val, y_val)
+                    
+                    # Test loss
+                    y_pred_test = model(x_test)
+                    test_loss = criterion(y_pred_test, y_test)
+                
+                print(f"Epoch {epoch:4d} | Train Loss: {loss.item():.6f} | Val Loss: {val_loss.item():.6f} | Test Loss: {test_loss.item():.6f}")
+                model.train()
+            
+            epoch += 1
+            if epoch >= num_epochs:
+                break
     
     # Final evaluation
     print("\n--- Final Evaluation ---")

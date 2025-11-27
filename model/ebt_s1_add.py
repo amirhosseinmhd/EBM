@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -99,7 +100,10 @@ def train_energy_model(train_dataset, val_dataset, test_dataset, input_dim, outp
     if torch.cuda.is_available():
         print(f"GPU: {torch.cuda.get_device_name(0)}")
     
-    # Move datasets to device
+    # Create data loader
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    
+    # Move validation and test datasets to device
     x_val, y_val = val_dataset.tensors
     x_test, y_test = test_dataset.tensors
     
@@ -114,54 +118,58 @@ def train_energy_model(train_dataset, val_dataset, test_dataset, input_dim, outp
     print(f"Steps with θ-gradients: 1 (the last step only)")
     print("=" * 60)
     
-    for epoch in range(num_epochs):
+    epoch = 0
+    while epoch < num_epochs:
         energy_fn.train()
         
-        # Sample random batch from training dataset
-        indices = torch.randint(0, len(train_dataset), (batch_size,))
-        x = train_dataset.tensors[0][indices]
-        y_true = train_dataset.tensors[1][indices]
-        
-        # Initialize from random guess
-        y_init = torch.randn(batch_size, output_dim, device=device) * 2 - 1
-        
-        # Optimize through energy minimization (WITH θ gradients for training)
-        y_final = optimize_energy(energy_fn, x, y_init, n_optimization_steps, step_size, track_theta_grad=True)
-        
-        # Supervised loss: ||ŷ_N - y*||²
-        loss = (y_final - y_true).pow(2).mean()
-        
-        # Backprop: only through the last optimization step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        
-        # Evaluate on validation and test sets
-        if epoch % 250 == 0:
-            energy_fn.eval()
+        for x, y_true in train_loader:
+            # Initialize from random guess
+            y_init = torch.randn(x.size(0), output_dim, device=device) * 2 - 1
             
-            # Training batch info
-            with torch.no_grad():
-                energy_init = energy_fn(x, y_init).mean()
-                energy_final = energy_fn(x, y_final.detach()).mean()
+            # Optimize through energy minimization (WITH θ gradients for training)
+            y_final = optimize_energy(energy_fn, x, y_init, n_optimization_steps, step_size, track_theta_grad=True)
             
-            # Validation loss (NO θ gradients needed)
-            val_size = len(val_dataset)
-            y_init_val = torch.randn(val_size, output_dim, device=device) * 2 - 1
-            y_pred_val = optimize_energy(energy_fn, x_val, y_init_val, n_optimization_steps, step_size, track_theta_grad=False)
-            with torch.no_grad():
-                val_loss = (y_pred_val.detach() - y_val).pow(2).mean()
+            # Supervised loss: ||ŷ_N - y*||²
+            loss = (y_final - y_true).pow(2).mean()
             
-            # Test loss (NO θ gradients needed)
-            test_size = len(test_dataset)
-            y_init_test = torch.randn(test_size, output_dim, device=device) * 2 - 1
-            y_pred_test = optimize_energy(energy_fn, x_test, y_init_test, n_optimization_steps, step_size, track_theta_grad=False)
-            with torch.no_grad():
-                test_loss = (y_pred_test.detach() - y_test).pow(2).mean()
+            # Backprop: only through the last optimization step
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
             
-            print(f"Epoch {epoch:4d} | Train Loss: {loss.item():.6f} | Val Loss: {val_loss.item():.6f} | Test Loss: {test_loss.item():.6f} | "
-                  f"Energy: {energy_init.item():.4f} → {energy_final.item():.4f}")
-            energy_fn.train()
+            # Evaluate on validation and test sets
+            if epoch % 250 == 0:
+                energy_fn.eval()
+                
+                # Training batch info
+                with torch.no_grad():
+                    energy_init = energy_fn(x, y_init).mean()
+                    energy_final = energy_fn(x, y_final.detach()).mean()
+                
+                # Validation loss (NO θ gradients needed)
+                val_size = len(val_dataset)
+                y_init_val = torch.randn(val_size, output_dim, device=device) * 2 - 1
+                y_pred_val = optimize_energy(energy_fn, x_val, y_init_val, n_optimization_steps, step_size, track_theta_grad=False)
+                with torch.no_grad():
+                    val_loss = (y_pred_val.detach() - y_val).pow(2).mean()
+                
+                # Test loss (NO θ gradients needed)
+                test_size = len(test_dataset)
+                y_init_test = torch.randn(test_size, output_dim, device=device) * 2 - 1
+                y_pred_test = optimize_energy(energy_fn, x_test, y_init_test, n_optimization_steps, step_size, track_theta_grad=False)
+                with torch.no_grad():
+                    test_loss = (y_pred_test.detach() - y_test).pow(2).mean()
+                
+                print(f"Epoch {epoch:4d} | Train Loss: {loss.item():.6f} | Val Loss: {val_loss.item():.6f} | Test Loss: {test_loss.item():.6f} | "
+                      f"Energy: {energy_init.item():.4f} → {energy_final.item():.4f}")
+                energy_fn.train()
+            
+            epoch += 1
+            if epoch >= num_epochs:
+                break
+        
+        if epoch >= num_epochs:
+            break
     
     print("\n" + "=" * 60)
     print("Training complete!")
@@ -250,13 +258,13 @@ def test_energy_model(energy_fn, n_optimization_steps=50, step_size=0.1):
 
 if __name__ == "__main__":
     # Configuration
-    task = 'add'
+    task = 'multiply'  # 'addition' or 'multiplication'
     vec_size = 10
     size_train = 10000
     size_val = 256
     size_test = 256
-    n_optimization_steps = 10
-    step_size = 1
+    n_optimization_steps = 20
+    step_size = 100
     
     # Setup device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
