@@ -71,7 +71,7 @@ def _create_multiplication_data(size_train, size_val, size_test, vec_size, devic
     x_train = torch.cat([v1_train, v2_train], dim=1)
     y_train = v1_train * v2_train
     
-    # Validation set: same distribution as training
+    # Validation set: same distrib—ution as training
     v1_val = torch.randn(size_val, vec_size, device=device) * 2 - 1
     v2_val = torch.randn(size_val, vec_size, device=device) * 2 - 1
     x_val = torch.cat([v1_val, v2_val], dim=1)
@@ -104,6 +104,7 @@ def convert_dataset_to_jax(dataset: TensorDataset):
     x_jax = torch_to_jax(x_torch)
     y_jax = torch_to_jax(y_torch)
     return x_jax, y_jax
+
 
 def torch_to_jax(tensor: torch.Tensor) -> jnp.ndarray:
     return jnp.array(tensor.detach().cpu().numpy())
