@@ -1,4 +1,5 @@
 import torch
+import jax.numpy as jnp
 from torch.utils.data import TensorDataset, DataLoader
 
 
@@ -20,7 +21,7 @@ def create_synthetic_data(task, size_train=1000, size_val=256, size_test=256, ve
         input_dim: Dimension of input
         output_dim: Dimension of output
     """
-    
+
     if task == 'add':
         return _create_addition_data(size_train, size_val, size_test, vec_size, device)
     elif task == 'multiply':
@@ -96,3 +97,13 @@ def _create_multiplication_data(size_train, size_val, size_test, vec_size, devic
 def get_dataloader(dataset, batch_size, shuffle=True):
     """Helper function to create DataLoader from dataset."""
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+
+def convert_dataset_to_jax(dataset: TensorDataset):
+    x_torch, y_torch = dataset.tensors
+    x_jax = torch_to_jax(x_torch)
+    y_jax = torch_to_jax(y_torch)
+    return x_jax, y_jax
+
+def torch_to_jax(tensor: torch.Tensor) -> jnp.ndarray:
+    return jnp.array(tensor.detach().cpu().numpy())
