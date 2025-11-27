@@ -5,7 +5,6 @@ from torch.utils.data import TensorDataset, DataLoader
 def create_synthetic_data(task, size_train=1000, size_val=256, size_test=256, vec_size=10, device='cpu'):
     """
     Create synthetic datasets for different tasks.
-    
     Args:
         task: Task type ('add', 'multiply', etc.)
         size_train: Number of training samples
