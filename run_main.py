@@ -222,7 +222,7 @@ if __name__ == "__main__":
     
     # Example 3: Compare multiple models using the wrapper
     results = compare_models(
-        models_to_run=['ebt', 'ffn'],
+        models_to_run=['ebt', 'ffn', 'pc'],
         task='add',
         vec_size=50
     )
