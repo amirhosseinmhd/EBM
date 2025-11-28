@@ -34,7 +34,7 @@ def get_default_config(model_type):
             'num_epochs': 100,
             'lr': 1e-3,
             'n_inference_steps': 20,
-            'inference_lr': 0.1
+            'infer_tau': 25,
         }
     }
     return configs.get(model_type, {})

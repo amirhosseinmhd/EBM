@@ -108,7 +108,7 @@ def run_main(model_type, task='add', vec_size=10, size_train=10000,
             y_pred_test, _ = model(
                 x_test,
                 n_inference_steps=model_config['n_inference_steps'],
-                inference_lr=model_config['inference_lr']
+                infer_tau=model_config['infer_tau']
             )
             test_mse = ((y_pred_test - y_test) ** 2).mean().item()
     else:
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     #     vec_size=10,
     #     config={
     #         'n_inference_steps': 30,
-    #         'inference_lr': 0.15,
+    #         'infer_tau': 0.15,
     #         'num_epochs': 5000
     #     }
     # )
