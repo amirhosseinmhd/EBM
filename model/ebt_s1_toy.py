@@ -197,26 +197,30 @@ def train_energy_model(train_dataset, val_dataset, test_dataset, input_dim, outp
     return energy_fn
 
 
-def test_energy_model(energy_fn, n_optimization_steps=50, step_size=0.1):
-    """Test-time inference with energy minimization"""
+def test_energy_model(energy_fn, test_dataset, output_dim, n_optimization_steps=50, step_size=0.1):
+    """Test-time inference with energy minimization
+    
+    Args:
+        energy_fn: Trained energy function model
+        test_dataset: TensorDataset containing test samples (x_test, y_test)
+        output_dim: Dimension of the output
+        n_optimization_steps: Number of optimization steps for inference
+        step_size: Step size for gradient descent
+d    """
     print("\nTesting with iterative energy minimization...")
     print("=" * 60)
     
     # Get device from model
     device = next(energy_fn.parameters()).device
     
-    # Generate test data
-    vec_size = 10
-    n_test = 100
-    v1_test = torch.randn(n_test, vec_size, device=device) * 4 - 2
-    v2_test = torch.randn(n_test, vec_size, device=device) * 4 - 2
-    x_test = torch.cat([v1_test, v2_test], dim=1)
-    y_true_test = v1_test + v2_test
+    # Get test data from dataset
+    x_test, y_true_test = test_dataset.tensors
+    n_test = x_test.size(0)
     
     energy_fn.eval()
     
     # Initialize from random guess
-    y_hat = torch.randn(n_test, vec_size, device=device) * 2 - 1
+    y_hat = torch.randn(n_test, output_dim, device=device) * 2 - 1
     
     print("Iterative refinement (test time):")
     for step in range(n_optimization_steps):
@@ -243,9 +247,8 @@ def test_energy_model(energy_fn, n_optimization_steps=50, step_size=0.1):
     
     # Show example
     print(f"\nExample (first 5 elements):")
-    print(f"v1:        {v1_test[0][:5].cpu().numpy()}")
-    print(f"v2:        {v2_test[0][:5].cpu().numpy()}")
-    print(f"True sum:  {y_true_test[0][:5].cpu().numpy()}")
+    print(f"Input:     {x_test[0][:5].cpu().numpy()}")
+    print(f"True out:  {y_true_test[0][:5].cpu().numpy()}")
     print(f"Predicted: {y_hat[0][:5].cpu().numpy()}")
     
     return final_mse.item()
@@ -289,7 +292,13 @@ if __name__ == "__main__":
     )
     
     # Optional: Test with more iterative refinement steps
-    test_mse = test_energy_model(energy_fn, n_optimization_steps=n_optimization_steps, step_size=step_size)
+    test_mse = test_energy_model(
+        energy_fn, 
+        test_dataset=test_dataset, 
+        output_dim=output_dim,
+        n_optimization_steps=n_optimization_steps, 
+        step_size=step_size
+    )
     print("\n" + "=" * 60)
     print(f"Extended Test MSE: {test_mse:.6f}")
     print("=" * 60)
