@@ -5,12 +5,13 @@ Main runner script for comparing EBT and Feedforward models on synthetic tasks.
 import torch
 import sys
 import os
+from jax import random
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from data.synthetic_data_generator import create_synthetic_data
 from model.ebt_s1_toy import train_energy_model, test_energy_model
 from model.ffn_toy import train_feedforward
-from model.pc_add import train_predictive_coding
+from model.pc_add import train_pcn
 from config.model_configs import get_default_config
 
 
@@ -72,6 +73,8 @@ def run_main(model_type, task='add', vec_size=10, size_train=10000,
         )
         test_mse = test_energy_model(
             model,
+            test_dataset=test_dataset,
+            output_dim=output_dim,
             n_optimization_steps=model_config['n_optimization_steps'],
             step_size=model_config['step_size']
         )
@@ -91,10 +94,13 @@ def run_main(model_type, task='add', vec_size=10, size_train=10000,
             x_test, y_test = test_dataset.tensors
             y_pred_test = model(x_test)
             test_mse = ((y_pred_test - y_test) ** 2).mean().item()
-            
+
+
+
     elif model_type == 'pc':
         print("Training Predictive Coding (PC)...")
-        model = train_predictive_coding(
+        dkey_ = random.PRNGKey(1234)
+        model, test_mse = train_pcn(dkey_,
             train_dataset=train_dataset,
             val_dataset=val_dataset,
             test_dataset=test_dataset,
@@ -102,15 +108,7 @@ def run_main(model_type, task='add', vec_size=10, size_train=10000,
             output_dim=output_dim,
             **model_config
         )
-        model.eval()
-        with torch.no_grad():
-            x_test, y_test = test_dataset.tensors
-            y_pred_test, _ = model(
-                x_test,
-                n_inference_steps=model_config['n_inference_steps'],
-                infer_tau=model_config['infer_tau']
-            )
-            test_mse = ((y_pred_test - y_test) ** 2).mean().item()
+
     else:
         raise ValueError(f"Unknown model_type: {model_type}. Must be 'ebt', 'ffn', or 'pc'")
     

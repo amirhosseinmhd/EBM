@@ -19,13 +19,13 @@ def get_default_config(model_type):
             'step_size': 1,
             'latent_dim': 128,
             'batch_size': 64,
-            'num_epochs': 10000,
+            'num_epochs': 100,
             'lr': 1e-3
         },
         'ffn': {
             'latent_dim': 128,
             'batch_size': 64,
-            'num_epochs': 50000,
+            'num_epochs': 100,
             'lr': 1e-4
         },
         'pc': {
