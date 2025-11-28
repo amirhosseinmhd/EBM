@@ -31,7 +31,7 @@ def get_default_config(model_type):
         'pc': {
             'latent_dim': 128,
             'batch_size': 64,
-            'num_epochs': 10000,
+            'num_epochs': 100,
             'lr': 1e-3,
             'n_inference_steps': 20,
             'inference_lr': 0.1
